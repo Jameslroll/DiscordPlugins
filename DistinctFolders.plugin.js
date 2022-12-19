@@ -9,17 +9,6 @@ module.exports = class DistinctFolders {
 	constructor(meta) {
 		for (let key in meta)
 			this[key] = meta[key];
-
-		this.settings = {
-			"backgroundOpacity": {
-				default: 0.5,
-				description: "Opacity of the folder's background."
-			},
-			"displayNames": {
-				default: true,
-				description: "Show names above folders."
-			}
-		}
 	}
 
 	log() {
@@ -118,30 +107,42 @@ module.exports = class DistinctFolders {
 	start() {
 		this.log("Starting...");
 
+		// Create the node immediately.
 		let serversNode = this.getServersNode();
-		let interval;
-
 		this.initServers(serversNode);
 
-		interval = setInterval(() => {
-			if (!document.body.contains(serversNode)) {
-				serversNode = this.getServersNode();
-				if (serversNode == null) return;
+		// Interval created once as script starts to make sure the node
+		// wasn't deleted (e.g.) guild nodes remount as the settings are
+		// opened and closed, or other window.
+		this.interval = setInterval(() => {
+			// Waits while the node is mounted.
+			if (document.body.contains(serversNode)) return;
 
-				this.log("Servers node was destroyed: reinitializing")
-				this.initServers(serversNode);
+			// Wait until the node doesn't exist.
+			serversNode = this.getServersNode();
+			if (serversNode == null) return;
 
-				// clearInterval(interval);
-			}
+			// Re-initialize.
+			this.log("Servers node was destroyed: reinitializing")
+			this.initServers(serversNode);
 		}, 3000)
 	}
 
 	stop() {
 		this.log("Stopping...");
 
+		// Remove the observer.
 		this.observer.disconnect();
 		this.observer = null;
 
+		// Stop the interval.
+		if (this.interval)
+		{
+			clearInterval(this.interval);
+			this.interval = null;
+		}
+
+		// Remove created nodes.
 		const serversNode = this.getServersNode();
 
 		for (const child of serversNode.childNodes)
